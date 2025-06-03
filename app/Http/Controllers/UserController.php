@@ -2,132 +2,82 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\UserRequest;
+use App\Traits\ApiResponseTrait;
 use App\Models\User;
-use Illuminate\Container\Attributes\Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
+use Exception;
 
 class UserController extends Controller
 {
+    use ApiResponseTrait;
 
     public function index()
     {
-        if (\Illuminate\Support\Facades\Auth::check() && \Illuminate\Support\Facades\Auth::user()->role === 'admin') {
-            $users = User::paginate(10);
-            return response()->json(['users' => $users],201);
-        }else{
-            return response()->json(['error'=>'Unauthorized You must be Admin'],401);
+        try {
+            return $this->retrievedResponse(Auth::user());
+        } catch (Exception $e) {
+            Log::error($e);
+            return $this->serverErrorResponse('An error occurred while fetching user data.');
         }
     }
-
-    public function store(UserRequest $request)
+    public function update(Request $request)
     {
-        if (\Illuminate\Support\Facades\Auth::check() && \Illuminate\Support\Facades\Auth::user()->role === 'admin') {
+        try {
+            $user = $request->user();
 
-            $validated = $request->validated();
-            $user = User::create($validated);
-            return response()->json(['message' => 'User Created!'],201);
-
-        }else{
-            return response()->json(['error'=>'Unauthorized You must be Admin'],401);
-        }
-    }
-
-    public function update($id,UserRequest $request)
-    {
-        $user = User::findorfail($id);
-        if (\Illuminate\Support\Facades\Auth::check() && \Illuminate\Support\Facades\Auth::user()->role === 'admin') {
-
-            $validated = $request->validate([
-                'name' => 'string|max:255',
-                'email' => 'string|email|max:255|unique:users,email,'.$user->id,
-                'phone' => 'min:10|max:19',
-                'address' => 'string|max:255',
-                'role' => 'in:admin,user',
+            $validatedData = $request->validate([
+                'name' => 'nullable|string|max:255',
+                'email' => 'nullable|string|email|max:255|unique:users,email,'.$user->id,
+                'phone' => 'nullable|min:10|regex:/^09\d{8}$/',
+                'address' => 'nullable|string|max:255',
+                'current_password' => 'nullable|string|required_with:new_password',
+                'new_password' => 'nullable|string|min:3|confirmed',
             ]);
-            $user->update($validated);
-            return response()->json(['message' => $user],201);
-        }else{
-            return response()->json(['error'=>'Unauthorized You must be Admin'],401);
-        }
-    }
 
-    public function destroy($id)
-    {
+            $user->fill(array_filter([
+                'name' => $validatedData['name'] ?? null,
+                'email' => $validatedData['email'] ?? null,
+                'phone' => $validatedData['phone'] ?? null,
+                'address' => $validatedData['address'] ?? null,
+            ]));
 
-        $user = User::findorfail($id);
-
-        if (\Illuminate\Support\Facades\Auth::check() && \Illuminate\Support\Facades\Auth::user()->role === 'admin') {
-            if ($user->id != 1 )
-            {
-                $user->tokens()->delete();
-                $user->delete();
-                return response()->json(['message' => 'User Deleted!'],201);
-            }else{
-                return response()->json(['message' => 'This is Super Admin !!! '],201);
+            if ($request->filled('new_password')) {
+                if (!Hash::check($request->current_password, $user->password)) {
+                    return $this->validationErrorResponse(['current_password' => 'Current password is not correct.']);
+                }
+                $user->password = Hash::make($request->new_password);
             }
-        }else{
-            return response()->json(['error'=>'Unauthorized You must be Admin'],401);
+
+            $user->save();
+
+            return $this->updatedResponse($user->fresh());
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->validationErrorResponse($e->errors());
+        } catch (Exception $e) {
+            Log::error($e);
+            return $this->serverErrorResponse('An error occurred while updating the profile.');
         }
-
-
-
     }
 
-    public function profileIndex()
+
+    public function destroy()
     {
-        return response()->json(['user' => \Illuminate\Support\Facades\Auth::user()],201);
-    }
-
-    public function profileUpdate(Request $request)
-    {
-        $user = \Illuminate\Support\Facades\Auth::user();
-        $validated = $request->validate([
-            'name' => 'string|max:255',
-            'email' => 'string|email|max:255|unique:users,email,'.$user->id,
-            'phone' => 'min:10|max:19',
-            'address' => 'string|max:255',
-        ]);
-        $user->update($validated);
-        return response()->json([
-            'message' => 'User Updated!',
-            'user' => $user,
-            ],201);
-    }
-
-    public function profileChangePassword(Request $request)
-    {
-        $user = $request->user();
-
-        $validator = Validator::make($request->all(), [
-            'current_password' => 'required',
-            'new_password' => 'required|min:3|confirmed',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        if (!Hash::check($request->current_password, $user->password)) {
-            return response()->json(['message' => 'Current password is incorrect'], 403);
-        }
-
-        $user->password = Hash::make($request->new_password);
-        $user->save();
-
-        return response()->json(['message' => 'Password updated successfully']);
-    }
-
-    public function profileDelete(Request $request)
-    {
-        $user = \Illuminate\Support\Facades\Auth::user();
+        try {
+            /** @var \App\Models\User $user */
+            $user = Auth::user();
 
             $user->tokens()->delete();
 
             $user->delete();
-            return response()->json(['message' => 'User Deleted!'],201);
+            return $this->deletedResponse();
 
+        } catch (Exception $e) {
+            Log::error($e);
+            return $this->serverErrorResponse('An error occurred while deleting the user.');
+        }
     }
 }
