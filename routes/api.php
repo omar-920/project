@@ -19,5 +19,9 @@ Route::post('/user/create',[UserController::class,'store']);
 Route::put('/user/{id}/update',[UserController::class,'update']);
 Route::delete('/user/{id}/delete',[UserController::class,'destroy']);
 
+Route::get('/profile',[UserController::class,'profileIndex']);
+Route::put('/profile/update',[UserController::class,'profileUpdate']);
+Route::put('/profile/change-password',[UserController::class,'profileChangePassword']);
+Route::delete('/profile/delete',[UserController::class,'profileDelete']);
 });
 
