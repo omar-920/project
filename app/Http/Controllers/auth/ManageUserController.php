@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use App\Traits\ApiResponseTrait;
 use App\Http\Requests\UserRequest;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Illuminate\Validation\ValidationException;
@@ -41,17 +42,37 @@ class ManageUserController extends Controller
     {
         try {
             $user = User::findOrFail($id);
-            $validated = $request->validate([
+            if ($user->id === 1) {
+                return $this->apiResponse('error', 'This is Super Admin !!!', null, 403);
+            }
+            if (Auth::user()->id == 1){
+
+                $validated = $request->validate([
                 'name' => 'sometimes|string|max:255',
                 'email' => 'sometimes|string|email|max:255|unique:users,email,' . $user->id,
                 'phone' => 'sometimes|nullable|min:10|max:19',
                 'address' => 'sometimes|nullable|string|max:255',
                 'role' => 'sometimes|in:admin,user',
-            ]);
-            $user->update($validated);
-            return $this->updatedResponse($user);
+                ]);
+                $user->update($validated);
+                return $this->updatedResponse($user);
+
+            }
+            if ($user->role === 'admin') {
+                return $this->apiResponse('error', 'This is Admin !!!', null, 403);
+            }else{
+                $validated = $request->validate([
+                    'name' => 'sometimes|string|max:255',
+                    'email' => 'sometimes|string|email|max:255|unique:users,email,' . $user->id,
+                    'phone' => 'sometimes|nullable|min:10|max:19',
+                    'address' => 'sometimes|nullable|string|max:255',
+                    'role' => 'sometimes|in:admin,user',
+                ]);
+                $user->update($validated);
+                return $this->updatedResponse($user);
+            }
         }catch (ValidationException $e) {
-        
+
             Log::warning('Validation failed for user update (ID: ' . $id . '): ' . json_encode($e->errors()));
             return $this->validationErrorResponse(json_encode($e->errors()));
         }
@@ -67,14 +88,21 @@ class ManageUserController extends Controller
     {
         try {
             $user = User::findOrFail($id);
-
             if ($user->id === 1) {
                 return $this->apiResponse('error', 'This is Super Admin !!!', null, 403);
             }
-
-            $user->tokens()->delete();
-            $user->delete();
-            return $this->deletedResponse('User Deleted!');
+            if (Auth::user()->id == 1){
+                $user->tokens()->delete();
+                $user->delete();
+                return $this->deletedResponse('User Deleted!');
+            }
+            if ($user->role === 'admin') {
+                return $this->apiResponse('error', 'This is Admin !!!', null, 403);
+            }else{
+                $user->tokens()->delete();
+                $user->delete();
+                return $this->deletedResponse('User Deleted!');
+            }
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return $this->notFoundResponse('User not found.');
         } catch (Exception $e) {
