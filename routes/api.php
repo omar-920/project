@@ -3,8 +3,10 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\MessageController;
 use App\Http\Controllers\UserEmailVerification;
 use App\Http\Controllers\auth\ManageUserController;
+use App\Http\Controllers\auth\AdminMessageController;
 
 //Auth Routes
 
