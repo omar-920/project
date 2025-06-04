@@ -67,9 +67,11 @@ class UserController extends Controller
     public function destroy()
     {
         try {
+            $user =Auth::user();
+            if ($user->id === 1) {
+                return $this->apiResponse('error', 'This is Super Admin !!!', null, 403);
+            }
             /** @var \App\Models\User $user */
-            $user = Auth::user();
-
             $user->tokens()->delete();
 
             $user->delete();
