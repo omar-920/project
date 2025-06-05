@@ -36,17 +36,12 @@ class AuthController extends Controller
             ]);
 
             $user->notify(new WelcomeUser());
-
-            $token = $user->createToken('auth_token')->plainTextToken;
-
             return $this->createdResponse([
                 'user' => [
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
                 ],
-                'access_token' => $token,
-                'token_type' => 'Bearer',
             ], 'User registered successfully!');
 
         } catch (ValidationException $e) {

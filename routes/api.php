@@ -10,7 +10,7 @@ use App\Http\Controllers\auth\AdminMessageController;
 
 //Auth Routes
 
-Route::post('/register', [\App\Http\Controllers\auth\AuthController::class,'register'])->middleware('guest');
+Route::post('/register', [\App\Http\Controllers\auth\AuthController::class,'register'])->middleware('guest:sanctum');
 Route::post('/login', [\App\Http\Controllers\auth\AuthController::class,'login'])->middleware('throttle:5,2')->name('login')->middleware('guest');
 Route::post('/logout', [\App\Http\Controllers\auth\AuthController::class,'logout'])->middleware('auth:sanctum');
 
