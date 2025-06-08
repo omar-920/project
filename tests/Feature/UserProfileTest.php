@@ -19,6 +19,7 @@ class UserProfileTest extends TestCase
     {
         parent::setUp();
         $this->user = User::factory()->create([
+            'id'=>3,
             'password' => Hash::make('currentpassword'),
         ]);
         $this->token = $this->user->createToken('test_token')->plainTextToken;

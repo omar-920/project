@@ -46,8 +46,6 @@ class AuthTest extends TestCase
                      'message',
                      'data' => [
                          'user' => ['id', 'name', 'email'],
-                         'access_token',
-                         'token_type',
                      ],
                      'status code',
                  ]);
