@@ -22,7 +22,6 @@ class ManageUserTest extends TestCase
     }
 
     /** @test */
-    /** @test */
     public function admin_can_get_all_users()
     {
         $response = $this->actingAs($this->admin, 'sanctum')->getJson('/api/users');
